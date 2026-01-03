@@ -267,6 +267,8 @@ class file_tree {
 class file_explorer {
     file_tree tree;
     vector<int> idx;
+    int print_line_start;
+    SCREEN *scr;
 
     public:
     file_explorer() {
@@ -274,21 +276,44 @@ class file_explorer {
         tree.expand();
         idx = vector<int>();
 
-        initscr();
+        init_curses();
+    }
+
+    ~file_explorer() {
+        uninit_curses();
+    }
+
+    void init_curses() {
+        FILE *fd = fopen("/dev/tty", "r+");
+        scr = newterm(NULL, fd, fd);
+        //initscr();
         cbreak();
         noecho();
         curs_set(0);
         keypad(stdscr, TRUE);
     }
 
+    void uninit_curses() {
+        endwin();
+        delscreen(scr);
+    }
+
     void print() {
         clear();
         file_tree_string strs = tree.to_tree_string();
         int active_row = get_active_row();
-        for (int i = 0; i < strs.num_entries(); i++) {
-            mvprintw(i, 0, strs.get_entry(i).c_str());
+
+        int num_printed_lines = strs.num_entries();
+        if (LINES < num_printed_lines) {
+            num_printed_lines = LINES;
         }
-        mvchgat(active_row, 4 * strs.get_indent(active_row), strs.get_entry(active_row).length() - 4 * strs.get_indent(active_row), A_REVERSE, 1, NULL);
+        for (int i = 0; i < num_printed_lines; i++) {
+            if (i + print_line_start > strs.num_entries()) {
+                break;
+            }
+            mvprintw(i, 0, strs.get_entry(i + print_line_start).c_str());
+        }
+        mvchgat(active_row - print_line_start, 4 * strs.get_indent(active_row), strs.get_entry(active_row).length() - 4 * strs.get_indent(active_row), A_REVERSE, 1, NULL);
         refresh();
     }
 
@@ -351,20 +376,24 @@ class file_explorer {
                     tree.update();
                     break;
                 case 'q':
+                    cout << entry->get_path().string();
+                    cout.flush();
                     return;
                 case 'c':
                     if (entry->is_file()) {
-                        endwin();
-                        cout << "Press any key to return to the file explorer";
-                        cout.flush();
-                        system(("less -f '" + entry->get_path().string() + "'").c_str());
-                        initscr();
-                        cbreak();
-                        noecho();
-                        curs_set(0);
-                        keypad(stdscr, TRUE);
+                        uninit_curses();
+                        //cout << "Press any key to return to the file explorer";
+                        //cout.flush();
+                        system(("less -f '" + entry->get_path().string() + "'"  + "> /dev/tty").c_str());
+                        init_curses();
                     }
             };
+            int active_row = get_active_row();
+            if (active_row < print_line_start) {
+                print_line_start = active_row;
+            } else if (active_row >= print_line_start + LINES) {
+                print_line_start = active_row - LINES + 1;
+            }
         }
     }
 
@@ -403,9 +432,6 @@ class file_explorer {
         return cursor;
     }
 
-    ~file_explorer() {
-        endwin();
-    }
 };
 
 int main() {
