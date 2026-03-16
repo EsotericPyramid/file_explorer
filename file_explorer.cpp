@@ -7,7 +7,7 @@
 
 
 using namespace std;
-using namespace __fs::filesystem;
+using namespace filesystem;
 
 class file_tree_string {
     vector<string> strs;

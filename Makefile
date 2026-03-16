@@ -1,7 +1,7 @@
 CC=clang++
 
 
-CFLAGS=-std=c++11 -g -Wall -Wextra -lncurses
+CFLAGS=-std=c++17 -g -Wall -Wextra -lncurses
 SRC=file_explorer.cpp
 TARGET=file_explorer
 all: $(SRC)
